@@ -1,6 +1,6 @@
 Information about CoAuthor data
 
-After running the notebook Prepare CoAuthor data from raw to plain text.ipynb you will have
+After running the notebook [Prepare CoAuthor data from raw to plain text.ipynb](https://github.com/AARichburg/Human-AI_Authorship_Analysis/blob/main/Prepare_CoAuthor_data_from_raw_to_plain_text.ipynb) you will have
 access to the files CoAuthor_Data_session.csv and CoAuthor_Data_segment.csv.  These CSV files
 contain the session/segment level splits of the CoAuthor Data (https://coauthor.stanford.edu/).
 There are the following seven fields:
@@ -17,7 +17,7 @@ bove link).
 7) length: the length of the tokenized text
 
 Example use:
-
+```
 import pandas as pd
 coauthor_data = pd.read_csv('CoAuthor_Data_segment.csv')
 
@@ -29,3 +29,4 @@ filtered_author_df = coauthor_data.loc[coauthor_data['author_id'] == AUTHOR_ID]
 user_samples = filtered_author_df.loc[filtered_author_df['sentence_author'] == 'user']
 api_samples = filtered_author_df.loc[filtered_author_df['sentence_author'] == 'api']
 combine_user_api_samples = pd.concat([user_samples, api_samples], ignore_index=True)
+```
