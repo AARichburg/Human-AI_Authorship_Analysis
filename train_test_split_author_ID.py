@@ -25,7 +25,7 @@ def filtering_preprocess(a_df,min_sessions,filt_sesh=True,filt_auth=True):
     has_api_data = set(check_author_type(a_df, auth_type='api'))
     has_edit_data = set(check_author_type(a_df, auth_type='user_and_api'))
     keep_data = has_user_data.intersection(has_edit_data,has_api_data)
-    print('sessions satisfy all conditions %s'%(len(keep_data)))
+    print('%s sessions satisfy all conditions'%(len(keep_data)))
     a_df = a_df[a_df.session_id.isin(keep_data)]
   #filter to make sure there is enough data per author
   if filt_auth == True:
@@ -75,6 +75,59 @@ def generate_sequence_dataframes(train_df, test_df, num_labels=3, num_trials=20,
     df_list.append((sub_train_df, sub_test_df))
   return df_list
 
+def generate_session_data(a_df,SEED=42):
+  list_of_sessions = list(set(a_df['session_id']))
+  session_out_df = pd.DataFrame(columns=['example_id','session_id','author_id','prompt_id','all_text','user_text','user_api_text','user_edit_text','user_api_edit_text','user_label','user_api_label','user_edit_label','user_api_edit_label'])
+  count = 0
+  for sesh in list_of_sessions:
+    sub_df = a_df.loc[a_df['session_id'] == sesh].copy()
+    auth = list(sub_df['author_id'])[0]
+    prompt = list(sub_df['prompt_id'])[0]
+    user_text, user_api_text, user_edit_text, user_api_edit_text, all_text = reconstruct_session(sub_df)
+    new_row = {'example_id': count, 'session_id':sesh, 'author_id':auth, 'prompt_id':prompt, 'all_text':all_text[0], 'user_text':user_text[0], 'user_api_text':user_api_text[0], 'user_edit_text':user_edit_text[0], 'user_api_edit_text':user_api_edit_text[0], 'user_text_label':user_text[1], 'user_api_label':user_api_text[1], 'user_edit_label':user_edit_text[1], 'user_api_edit_label':user_api_edit_text[1]}
+    session_out_df = session_out_df._append(new_row, ignore_index=True)
+    count+=1
+  return session_out_df
+
+#collects user/api/edited segments to generate session text in order
+#can filter out any of the above categories
+def reconstruct_session(a_df):
+  user_df = a_df.loc[a_df['sentence_author'] == 'user'].copy()
+  api_df = a_df.loc[a_df['sentence_author'] == 'api'].copy()
+  edit_df = a_df.loc[a_df['sentence_author'] == 'user_and_api'].copy()
+  all_text = combine_text(a_df)
+  #smp_amt = min(math.ceil(stats.mean([len(user_df.index),len(api_df.index),len(edit_df.index)])),len(user_df.index))
+  smp_amt = 6
+  out_u_df = user_df.sample(n=min(len(user_df),smp_amt), random_state=42)
+  hal_u_df = user_df.sample(n=min(len(user_df),int(smp_amt/2)),random_state=1)
+  hal_a_df = api_df.sample(n=min(len(api_df),int(smp_amt/2)),random_state=2)
+  hal_e_df = edit_df.sample(n=min(len(edit_df),int(smp_amt/2)),random_state=3)
+  thd_u_df = user_df.sample(n=min(len(user_df),int(smp_amt/3)),random_state=6)
+  thd_a_df = api_df.sample(n=min(len(api_df),int(smp_amt/3)),random_state=5)
+  thd_e_df = edit_df.sample(n=min(len(edit_df),int(smp_amt/3)),random_state=4)
+  out_ua_df = pd.concat([hal_u_df, hal_a_df], ignore_index=True)
+  out_ue_df = pd.concat([hal_u_df, hal_e_df], ignore_index=True)
+  out_uae_df = pd.concat([thd_u_df, thd_a_df, thd_e_df], ignore_index=True)
+  user_text = combine_text(out_u_df)
+  ua_text = combine_text(out_ua_df)
+  ue_text = combine_text(out_ue_df)
+  uae_text = combine_text(out_uae_df)
+  return user_text, ua_text, ue_text, uae_text, all_text
+
+def combine_text(temp_df):
+  collect_lines = []
+  for idx in temp_df.index:
+    curr_line = temp_df.loc[idx].copy()
+    sent_id = curr_line['sentence_id']
+    sent_text = curr_line['sentence_text']
+    text_type = curr_line['sentence_author']
+    if sent_text !=  'NO_DATA':
+      collect_lines.append((sent_id, sent_text, text_type))
+  collect_lines = sorted(collect_lines, key = lambda x: x[0])
+  _, just_the_text, text_types = zip(*collect_lines)
+  session_text = ' '.join(just_the_text)
+  return [session_text, list(text_types)]
+
 #####################################################################
 #Edit parameters here
 #####################################################################
@@ -96,8 +149,9 @@ coauthor_data_filtered = filtering_preprocess(coauthor_data, min_sess)
 print("%d authors with at least %d sessions" % (len(set(coauthor_data_filtered['author_id'])), min_sess))
 
 the_df = prep_detect_author(coauthor_data_filtered)
+the_df = generate_session_data(the_df, SEED=RANDOM)
 
-#create ineger IDs for each author ID
+#create integer IDs for each author ID
 id2label = {}
 label2id = {}
 cnt = 0
@@ -113,8 +167,8 @@ train_idx, test_idx = next(gs.split(the_df, the_df['label'], groups=the_df['prom
 #intermediate save of filtered data
 X_save_train = the_df.loc[train_idx].copy()
 X_save_test = the_df.loc[test_idx].copy()
-X_save_train.to_csv('%s/coauthor_%s_train_for_auth_ID.csv'%(data_dir,granularity),index=False)
-X_save_test.to_csv('%s/coauthor_%s_test_for_auth_ID.csv'%(data_dir,granularity),index=False)
+X_save_train.to_csv('%s/coauthor_session_train_for_auth_ID.csv'%(data_dir),index=False)
+X_save_test.to_csv('%s/coauthor_session_test_for_auth_ID.csv'%(data_dir),index=False)
 
 #save data for each text type combination and number of authors/labels
 text_type_list = ['user_text', 'user_api_text', 'user_edit_text', 'user_api_edit_text']
