@@ -2,7 +2,7 @@ Information about CoAuthor data
 
 After running the notebook [Prepare CoAuthor data from raw to plain text.ipynb](https://github.com/AARichburg/Human-AI_Authorship_Analysis/blob/main/Prepare_CoAuthor_data_from_raw_to_plain_text.ipynb) you will have
 access to the files CoAuthor_Data_session.csv and CoAuthor_Data_segment.csv.  These CSV files
-contain the session/segment level splits of the CoAuthor Data (https://coauthor.stanford.edu/).
+contain the session/segment level splits of the [CoAuthor Data](https://coauthor.stanford.edu/).
 There are the following seven fields:
 
 1) sentence_id: the number sentence for the session.  Note some sessions do not 
@@ -30,3 +30,6 @@ user_samples = filtered_author_df.loc[filtered_author_df['sentence_author'] == '
 api_samples = filtered_author_df.loc[filtered_author_df['sentence_author'] == 'api']
 combine_user_api_samples = pd.concat([user_samples, api_samples], ignore_index=True)
 ```
+Once you have extracted the text data into CoAuthor_Data_session.csv and CoAuthor_Data_segment.csv, you can run train_test_split_human_v_AI.py and train_test_split_author_ID.py to create the train/test split across trials as used in the paper.
+
+The code to train and evaluate the character n-gram model are hosted at the repo for the PAN2022 shared task [here](https://github.com/pan-webis-de/pan-code/tree/master/clef22/authorship-verification).
