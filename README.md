@@ -30,6 +30,6 @@ user_samples = filtered_author_df.loc[filtered_author_df['sentence_author'] == '
 api_samples = filtered_author_df.loc[filtered_author_df['sentence_author'] == 'api']
 combine_user_api_samples = pd.concat([user_samples, api_samples], ignore_index=True)
 ```
-Once you have extracted the text data into CoAuthor_Data_session.csv and CoAuthor_Data_segment.csv, you can run train_test_split_human_v_AI.py and train_test_split_author_ID.py to create the train/test split across trials as used in the paper.
+Once you have extracted the text data into CoAuthor_Data_session.csv and CoAuthor_Data_segment.csv, you can run train_test_split_human_v_AI.py, train_test_split_author_ID.py and train_test_split_author_verif.py to create the train/test split across trials as used in the paper.
 
 The code to train and evaluate the character n-gram model are hosted at the repo for the PAN2022 shared task [here](https://github.com/pan-webis-de/pan-code/tree/master/clef22/authorship-verification).
